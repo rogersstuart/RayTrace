@@ -453,19 +453,9 @@ int main(int argc, char **argv)
         
         if (!rendering)
         {
-            //auto task = std::async(std::launch::async, generate_frame);
-            //if (worker != NULL)
-                //   delete(worker);
-
-            
-
             auto worker = std::thread(generate_frame);
             worker.detach();
-
-                //generate_frame();
-                //auto th = std::thread([]() {std::cout << "test"; });
-                //thd.join();
-                
+ 
             //generate_frame();
             rendering = true;
         }
