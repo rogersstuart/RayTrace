@@ -59,6 +59,7 @@
 
 #include "./glfw/include/GLFW/glfw3.h"
 #include <thread>
+#include <future>
 
 template<typename T>
 class Vec3
@@ -285,6 +286,7 @@ void render(const std::vector<Sphere> &spheres)
             *pixel = trace(Vec3f(0), raydir, spheres, 0);
         }
     }
+
     // Save result to a PPM image (keep these flags if you compile under Windows)
 
     /*
@@ -296,7 +298,7 @@ void render(const std::vector<Sphere> &spheres)
                (unsigned char)(std::fmin(float(1), image[i].z) * 255);
     }
     ofs.close();
-    delete [] image;
+    
     */
 }
 
@@ -304,8 +306,12 @@ bool frame_ready = false, rendering = false;
 Vec3f* image_buffer;
 void generate_frame()
 {
+    std::cout << "here\n";
+    
     srand(13);
+
     std::vector<Sphere> spheres;
+
     // position, radius, surface color, reflectivity, transparency, emission color
     spheres.push_back(Sphere(Vec3f(0.0, -10004, -20), 10000, Vec3f(0.20, 0.20, 0.20), 1, 1));
     spheres.push_back(Sphere(Vec3f(0.0, 0, -20), 4, Vec3f(1.00, 0.32, 0.36), 1, 1));
@@ -314,6 +320,7 @@ void generate_frame()
     spheres.push_back(Sphere(Vec3f(-5.5, 0, -15), 3, Vec3f(0.90, 0.90, 0.90), 1, 1));
     // light
     spheres.push_back(Sphere(Vec3f(0.0, 20, -30), 3, Vec3f(0.00, 0.00, 0.00), 0, 0.0, Vec3f(3)));
+
     render(spheres);
 
     frame_ready = true;
@@ -324,6 +331,9 @@ void generate_frame()
 // and 1 light (which is also a sphere). Then, once the scene description is complete
 // we render that scene, by calling the render() function.
 //[/comment]
+
+//std::thread* worker = NULL;
+
 int main(int argc, char **argv)
 {
     // Setup window
@@ -331,8 +341,6 @@ int main(int argc, char **argv)
 
     if (!glfwInit())
         return 1;
-
-    
 
     // Decide GL+GLSL versions
 #if __APPLE__
@@ -420,6 +428,8 @@ int main(int argc, char **argv)
     const int my_image_height = 1080;
     char * buffer_image = new char[4 * my_image_width * my_image_height];
 
+    GLuint my_image_texture = 0;
+
     // Main loop
     while (!glfwWindowShouldClose(window))
     {
@@ -440,51 +450,55 @@ int main(int argc, char **argv)
             ImGui::ShowDemoWindow(&show_demo_window);
 
         // 2. Show a simple window that we create ourselves. We use a Begin/End pair to created a named window.
+        
+        if (!rendering)
         {
-            /*
+            //auto task = std::async(std::launch::async, generate_frame);
+            //if (worker != NULL)
+                //   delete(worker);
+
             
-            */
-            if (!rendering)
-            {
-                
-                    //std::thread t(generate_frame);
-                    generate_frame();
-                
+
+            auto worker = std::thread(generate_frame);
+            worker.detach();
+
                 //generate_frame();
-                rendering = true;
-            }
-            else
-            if (frame_ready)
-            {
-                rendering = false;
-
-                //std::memcpy(buffer_image, image, sizeof(Vec3f) * my_image_width * my_image_height);
-                for (int i = 0; i < my_image_width * my_image_height; i++)
-                {
-                    buffer_image[i * 3 + 0] = std::fmin(float(1), image[i].x) * 255;
-                    buffer_image[i * 3 + 1] = std::fmin(float(1), image[i].y) * 255;
-                    buffer_image[i * 3 + 2] = std::fmin(float(1), image[i].z) * 255;
-                    buffer_image[i * 3 + 3] = 255;
-                }
+                //auto th = std::thread([]() {std::cout << "test"; });
+                //thd.join();
                 
-                delete [] image;
-                frame_ready = false;
-            }
-
-            
-            GLuint my_image_texture = 0;
-            bool ret = LoadTextureFromArray((char*)buffer_image, &my_image_texture);
-            IM_ASSERT(ret);
-
-            ImGui::Begin("OpenGL Texture Text");
-            ImGui::Text("pointer = %p", (void*)&my_image_texture);
-            ImGui::Text("size = %d x %d", my_image_width, my_image_height);
-            ImGui::Image((void*)(intptr_t)my_image_texture, ImVec2(my_image_width, my_image_height));
-            ImGui::End();
-            
-            
-            
+            //generate_frame();
+            rendering = true;
         }
+        else
+        if (frame_ready)
+        {
+            
+            for (int i = 0; i < my_image_width * my_image_height; i++)
+            {
+                buffer_image[i * 3 + 0] = std::fmin(float(1), image[i].x) * 255;
+                buffer_image[i * 3 + 1] = std::fmin(float(1), image[i].y) * 255;
+                buffer_image[i * 3 + 2] = std::fmin(float(1), image[i].z) * 255;
+                buffer_image[i * 3 + 3] = 255;
+            }
+                
+            delete [] image;
+
+            rendering = false;
+            frame_ready = false;
+
+            bool ret = LoadTextureFromArray((char*)buffer_image, &my_image_texture);
+        }
+
+        
+        
+        //IM_ASSERT(ret);
+
+        ImGui::Begin("OpenGL Texture Text");
+        ImGui::Text("pointer = %p", (void*)&my_image_texture);
+        ImGui::Text("size = %d x %d", my_image_width, my_image_height);
+        ImGui::Image((void*)(intptr_t)my_image_texture, ImVec2(my_image_width, my_image_height));
+        ImGui::End(); 
+        
 
         // Rendering
         ImGui::Render();
@@ -507,29 +521,4 @@ int main(int argc, char **argv)
     glfwTerminate();
 
     return 0;
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-    /// <summary>
-    /// /////////////////////////////////////////////////////////////
-    /// </summary>
-    /// <param name="argc"></param>
-    /// <param name="argv"></param>
-    /// <returns></returns>
-    
-    
-
-    //return 0;
 }
