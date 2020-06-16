@@ -20,7 +20,8 @@
 // You should have received a copy of the GNU General Public License
 // along with this program.  If not, see <http://www.gnu.org/licenses/>.
 // [/ignore]
-#define M_PI 3.141592653589793 
+#define M_PI 3.141592653589793
+
 #define _GLFW_WIN32
 
 #include "GL/gl3w.h"
@@ -99,40 +100,78 @@ typedef Vec3<float> Vec3f;
 
 class Sphere
 {
-public:
-    Vec3f center;                           /// position of the sphere
-    float radius, radius2;                  /// sphere radius and radius^2
-    Vec3f surfaceColor, emissionColor;      /// surface color and emission (light)
-    float transparency, reflection;         /// surface transparency and reflectivity
-    Sphere(
-        const Vec3f &c,
-        const float &r,
-        const Vec3f &sc,
-        const float &refl = 0,
-        const float &transp = 0,
-        const Vec3f &ec = 0) :
-        center(c), radius(r), radius2(r * r), surfaceColor(sc), emissionColor(ec),
-        transparency(transp), reflection(refl)
-    { /* empty */ }
-    //[comment]
-    // Compute a ray-sphere intersection using the geometric solution
-    //[/comment]
-    bool intersect(const Vec3f &rayorig, const Vec3f &raydir, float &t0, float &t1) const
-    {
-        Vec3f l = center - rayorig;
-        float tca = l.dot(raydir);
-        if (tca < 0) return false;
-        float d2 = l.dot(l) - tca * tca;
-        if (d2 > radius2) return false;
-        float thc = sqrt(radius2 - d2);
-        t0 = tca - thc;
-        t1 = tca + thc;
+    public:
+        Vec3f center;                           /// position of the sphere
+        float radius, radius2;                  /// sphere radius and radius^2
+        Vec3f surfaceColor, emissionColor;      /// surface color and emission (light)
+        float transparency, reflection;         /// surface transparency and reflectivity
+        Sphere(
+            const Vec3f &c,
+            const float &r,
+            const Vec3f &sc,
+            const float &refl = 0,
+            const float &transp = 0,
+            const Vec3f &ec = 0) :
+            center(c), radius(r), radius2(r * r), surfaceColor(sc), emissionColor(ec),
+            transparency(transp), reflection(refl)
+        { /* empty */ }
+        //[comment]
+        // Compute a ray-sphere intersection using the geometric solution
+        //[/comment]
+        bool intersect(const Vec3f &rayorig, const Vec3f &raydir, float &t0, float &t1) const
+        {
+            Vec3f l = center - rayorig;
+            float tca = l.dot(raydir);
+            if (tca < 0) return false;
+            float d2 = l.dot(l) - tca * tca;
+            if (d2 > radius2) return false;
+            float thc = sqrt(radius2 - d2);
+            t0 = tca - thc;
+            t1 = tca + thc;
         
-        return true;
-    }
+            return true;
+        }
 };
 
 
+#define STB_IMAGE_IMPLEMENTATION
+
+/*
+// Simple helper function to load an image into a OpenGL texture with common settings
+bool LoadTextureFromFile(const char* filename, GLuint* out_texture, int* out_width, int* out_height)
+{
+    // Load from file
+    int image_width = 0;
+    int image_height = 0;
+    unsigned char* image_data = stbi_load(filename, &image_width, &image_height, NULL, 4);
+
+    for (int i = 0; i < 100; i++)
+        std::cout << std::hex << int(image_data[i]);
+
+    if (image_data == NULL)
+        return false;
+
+    // Create a OpenGL texture identifier
+    GLuint image_texture;
+    glGenTextures(1, &image_texture);
+    glBindTexture(GL_TEXTURE_2D, image_texture);
+
+    // Setup filtering parameters for display
+    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR);
+    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
+
+    // Upload pixels into texture
+    glPixelStorei(GL_UNPACK_ROW_LENGTH, 0);
+    glTexImage2D(GL_TEXTURE_2D, 0, GL_RGBA, image_width, image_height, 0, GL_RGBA, GL_UNSIGNED_BYTE, image_data);
+    stbi_image_free(image_data);
+
+    *out_texture = image_texture;
+    *out_width = image_width;
+    *out_height = image_height;
+
+    return true;
+}
+*/
 
 // Simple helper function to load an image into a OpenGL texture with common settings
 bool LoadTextureFromArray(char* buffer, GLuint* out_texture)
@@ -159,6 +198,7 @@ bool LoadTextureFromArray(char* buffer, GLuint* out_texture)
 
     return true;
 }
+
 
 //[comment]
 // This variable controls the maximum recursion depth
@@ -290,7 +330,7 @@ void render(const std::vector<Sphere> &spheres)
     // Save result to a PPM image (keep these flags if you compile under Windows)
 
     /*
-    std::ofstream ofs("./untitled.ppm", std::ios::out | std::ios::binary);
+    std::ofstream ofs("out.ppm", std::ios::out | std::ios::binary);
     ofs << "P6\n" << width << " " << height << "\n255\n";
     for (unsigned i = 0; i < width * height; ++i) {
         ofs << (unsigned char)(std::fmin(float(1), image[i].x) * 255) <<
@@ -307,8 +347,6 @@ Vec3f* image_buffer;
 void generate_frame()
 {
     std::cout << "here\n";
-    
-    srand(13);
 
     std::vector<Sphere> spheres;
 
@@ -424,8 +462,8 @@ int main(int argc, char **argv)
     ImVec4 clear_color = ImVec4(0.45f, 0.55f, 0.60f, 1.00f);
 
     //buffer_image
-    const int my_image_width = 1920;
-    const int my_image_height = 1080;
+     int my_image_width = 1920;
+     int my_image_height = 1080;
     char * buffer_image = new char[4 * my_image_width * my_image_height];
 
     GLuint my_image_texture = 0;
@@ -465,10 +503,10 @@ int main(int argc, char **argv)
             
             for (int i = 0; i < my_image_width * my_image_height; i++)
             {
-                buffer_image[i * 3 + 0] = std::fmin(float(1), image[i].x) * 255;
-                buffer_image[i * 3 + 1] = std::fmin(float(1), image[i].y) * 255;
-                buffer_image[i * 3 + 2] = std::fmin(float(1), image[i].z) * 255;
-                buffer_image[i * 3 + 3] = 255;
+                buffer_image[i * 4 + 0] = std::fmin(float(1), image[i].x) * 255;
+                buffer_image[i * 4 + 1] = std::fmin(float(1), image[i].y) * 255;
+                buffer_image[i * 4 + 2] = std::fmin(float(1), image[i].z) * 255;
+                buffer_image[i * 4 + 3] = 255;
             }
                 
             delete [] image;
@@ -477,6 +515,7 @@ int main(int argc, char **argv)
             frame_ready = false;
 
             bool ret = LoadTextureFromArray((char*)buffer_image, &my_image_texture);
+            //bool ret = LoadTextureFromFile("out.ppm", &my_image_texture, &my_image_width, &my_image_height);
         }
 
         
