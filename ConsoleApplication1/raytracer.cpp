@@ -52,6 +52,7 @@
 #include <vector>
 #include <iostream>
 #include <cassert>
+#include <atomic>
 
 #include <sys/stat.h>
 
@@ -307,6 +308,8 @@ Vec3f trace(
 // trace it and return a color. If the ray hits a sphere, we return the color of the
 // sphere at the intersection point, else we return the background color.
 //[/comment]
+
+volatile int num_threads = 0;
 Vec3f* image;
 void render(const std::vector<Sphere> &spheres)
 {
@@ -316,16 +319,31 @@ void render(const std::vector<Sphere> &spheres)
     float invWidth = 1 / float(width), invHeight = 1 / float(height);
     float fov = 90, aspectratio = width / float(height);
     float angle = tan(M_PI * 0.5 * fov / 180.);
+
     // Trace rays
-    for (unsigned y = 0; y < height; ++y) {
-        for (unsigned x = 0; x < width; ++x, ++pixel) {
-            float xx = (2 * ((x + 0.5) * invWidth) - 1) * angle * aspectratio;
-            float yy = (1 - 2 * ((y + 0.5) * invHeight)) * angle;
-            Vec3f raydir(xx, yy, -1);
-            raydir.normalize();
-            *pixel = trace(Vec3f(0), raydir, spheres, 0);
-        }
+    for (unsigned y = 0; y < height; ++y)
+    {
+        auto thread = std::thread([invWidth, angle, aspectratio, invHeight, spheres, y, width, pixel]
+        {
+            for (unsigned x = 0; x < width; ++x)
+            {
+                float xx = (2 * ((x + 0.5) * invWidth) - 1) * angle * aspectratio;
+                float yy = (1 - 2 * ((y + 0.5) * invHeight)) * angle;
+                Vec3f raydir(xx, yy, -1);
+                raydir.normalize();
+                pixel[y*width + x] = trace(Vec3f(0), raydir, spheres, 0);
+            }
+
+            num_threads--;
+        });
+        thread.detach();
+
+        num_threads++;
+
+        while (num_threads > 12);
     }
+
+    while (num_threads > 0);
 
     // Save result to a PPM image (keep these flags if you compile under Windows)
 
@@ -344,6 +362,8 @@ void render(const std::vector<Sphere> &spheres)
 
 bool frame_ready = false, rendering = false;
 Vec3f* image_buffer;
+
+float sph_1 = 0;
 void generate_frame()
 {
     std::cout << "here\n";
@@ -351,7 +371,7 @@ void generate_frame()
     std::vector<Sphere> spheres;
 
     // position, radius, surface color, reflectivity, transparency, emission color
-    spheres.push_back(Sphere(Vec3f(0.0, -10004, -20), 10000, Vec3f(0.20, 0.20, 0.20), 1, 1));
+    spheres.push_back(Sphere(Vec3f(sph_1, -10004, -20), 10000, Vec3f(0.20, 0.20, 0.20), 1, 1));
     spheres.push_back(Sphere(Vec3f(0.0, 0, -20), 4, Vec3f(1.00, 0.32, 0.36), 1, 1));
     spheres.push_back(Sphere(Vec3f(5.0, -1, -15), 2, Vec3f(0.90, 0.76, 0.46), 1, 1));
     spheres.push_back(Sphere(Vec3f(5.0, 0, -25), 3, Vec3f(0.65, 0.77, 0.97), 1, 1));
@@ -362,6 +382,8 @@ void generate_frame()
     render(spheres);
 
     frame_ready = true;
+
+    sph_1++;
 }
 
 //[comment]
