@@ -19,6 +19,7 @@
     </ProjectConfiguration>
   </ItemGroup>
   <ItemGroup>
+    <ClCompile Include="BasicTracer.cpp" />
     <ClCompile Include="gl3w.c" />
     <ClCompile Include="imgui-master\imgui.cpp" />
     <ClCompile Include="imgui-master\imgui_demo.cpp" />
@@ -27,6 +28,14 @@
     <ClCompile Include="imgui_impl_glfw.cpp" />
     <ClCompile Include="imgui_impl_opengl3.cpp" />
     <ClCompile Include="raytracer.cpp" />
+    <ClCompile Include="Sphere.cpp" />
+    <ClCompile Include="Vec3.cpp" />
+  </ItemGroup>
+  <ItemGroup>
+    <ClInclude Include="BasicTracer.h" />
+    <ClInclude Include="RTCommon.h" />
+    <ClInclude Include="Sphere.h" />
+    <ClInclude Include="Vec3.h" />
   </ItemGroup>
   <PropertyGroup Label="Globals">
     <VCProjectVersion>16.0</VCProjectVersion>
